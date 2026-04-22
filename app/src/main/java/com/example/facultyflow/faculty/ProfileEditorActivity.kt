@@ -48,6 +48,7 @@ class ProfileEditorActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.btnSave.setOnClickListener { saveProfile() }
+        // Fixed: Use btnSaveSticky instead of tvSave
         binding.btnSaveSticky.setOnClickListener { saveProfile() }
         
         binding.btnDeleteAccount.setOnClickListener {
@@ -71,10 +72,10 @@ class ProfileEditorActivity : AppCompatActivity() {
             .addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     binding.etName.setText(doc.getString("name"))
+                    binding.etDesignation.setText(doc.getString("designation"))
                     binding.etDepartment.setText(doc.getString("department"), false)
                     binding.etRoomBlock.setText(doc.getString("roomBlock"))
                     binding.etOfficeHours.setText(doc.getString("officeHours"))
-                    binding.etDesignation.setText(doc.getString("designation"))
                 }
             }
     }
@@ -82,13 +83,13 @@ class ProfileEditorActivity : AppCompatActivity() {
     private fun saveProfile() {
         val userId = auth.currentUser?.uid ?: return
         val name = binding.etName.text.toString().trim()
+        val designation = binding.etDesignation.text.toString().trim()
         val department = binding.etDepartment.text.toString().trim()
         val roomBlock = binding.etRoomBlock.text.toString().trim()
         val officeHours = binding.etOfficeHours.text.toString().trim()
-        val designation = binding.etDesignation.text.toString().trim()
 
         if (name.isEmpty()) {
-            binding.tilName.error = "Name is required"
+            binding.etName.error = "Name is required"
             return
         }
 
@@ -97,10 +98,10 @@ class ProfileEditorActivity : AppCompatActivity() {
 
         val updates = hashMapOf(
             "name" to name,
+            "designation" to designation,
             "department" to department,
             "roomBlock" to roomBlock,
-            "officeHours" to officeHours,
-            "designation" to designation
+            "officeHours" to officeHours
         )
 
         db.collection("users").document(userId)

@@ -9,16 +9,19 @@ import com.example.facultyflow.faculty.FacultyHomeActivity
 import com.example.facultyflow.student.FacultyDirectoryActivity
 import com.example.facultyflow.utils.Constants
 import com.example.facultyflow.utils.PreferencesManager
+import com.google.firebase.auth.FirebaseAuth
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    private lateinit var auth: FirebaseAuth
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         
+        auth = FirebaseAuth.getInstance()
         val preferencesManager = PreferencesManager(this)
 
         // Fade in animation
@@ -31,14 +34,28 @@ class MainActivity : AppCompatActivity() {
             binding.mainContent.startAnimation(fadeOut)
             
             binding.root.postDelayed({
-                if (preferencesManager.isLoggedIn) {
-                    val intent = if (preferencesManager.userType == Constants.USER_TYPE_STUDENT) {
-                        Intent(this, FacultyDirectoryActivity::class.java)
+                val currentUser = auth.currentUser
+                
+                // CRITICAL FIX: Verify Firebase user exists and preferences match
+                if (currentUser != null && preferencesManager.isLoggedIn) {
+                    // Check email verification status on app launch
+                    if (currentUser.isEmailVerified) {
+                        val intent = if (preferencesManager.userType == Constants.USER_TYPE_STUDENT) {
+                            Intent(this, FacultyDirectoryActivity::class.java)
+                        } else {
+                            Intent(this, FacultyHomeActivity::class.java)
+                        }
+                        startActivity(intent)
                     } else {
-                        Intent(this, FacultyHomeActivity::class.java)
+                        // Not verified, force login
+                        auth.signOut()
+                        preferencesManager.clearAll()
+                        startActivity(Intent(this, LoginActivity::class.java))
                     }
-                    startActivity(intent)
                 } else {
+                    // No user or local session cleared
+                    auth.signOut()
+                    preferencesManager.clearAll()
                     startActivity(Intent(this, LoginActivity::class.java))
                 }
                 finish()

@@ -17,12 +17,30 @@
             android:orientation="vertical"
             android:padding="20dp">
 
-            <TextView
+            <RelativeLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="Faculty"
-                style="@style/TextAppearance.App.TitleLarge"
-                android:layout_marginBottom="16dp" />
+                android:layout_marginBottom="16dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Faculty"
+                    style="@style/TextAppearance.App.TitleLarge" />
+
+                <com.google.android.material.imageview.ShapeableImageView
+                    android:id="@+id/ivProfile"
+                    android:layout_width="32dp"
+                    android:layout_height="32dp"
+                    android:layout_alignParentEnd="true"
+                    android:layout_centerVertical="true"
+                    android:src="@drawable/profile_placeholder"
+                    app:shapeAppearanceOverlay="@style/CircleImage"
+                    android:padding="2dp"
+                    android:scaleType="centerCrop"
+                    app:strokeColor="@color/ios_blue"
+                    app:strokeWidth="1dp" />
+            </RelativeLayout>
 
             <com.google.android.material.card.MaterialCardView
                 style="@style/AppleCard"

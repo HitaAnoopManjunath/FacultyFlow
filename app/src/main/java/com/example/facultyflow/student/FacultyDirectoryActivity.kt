@@ -40,6 +40,11 @@ class FacultyDirectoryActivity : AppCompatActivity() {
         binding.chipAll.isChecked = true
         binding.chipAll.setChipBackgroundColorResource(R.color.ios_blue)
         binding.chipAll.setTextColor(ContextCompat.getColor(this, R.color.white))
+
+        // Profile navigation for Students
+        binding.ivProfile.setOnClickListener {
+            startActivity(Intent(this, StudentProfileActivity::class.java))
+        }
     }
 
     private fun setupFacultyList() {
