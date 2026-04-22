@@ -75,6 +75,11 @@
             android:name=".student.MyBookingsActivity"
             android:exported="false"
             android:theme="@style/Theme.FacultyFlow.NoActionBar" />
+
+        <activity
+            android:name=".student.StudentProfileActivity"
+            android:exported="false"
+            android:theme="@style/Theme.FacultyFlow.NoActionBar" />
             
     </application>
 

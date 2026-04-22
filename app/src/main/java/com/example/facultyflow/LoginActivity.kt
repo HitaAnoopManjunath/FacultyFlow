@@ -2,6 +2,7 @@ package com.example.facultyflow
 
 import android.content.Intent
 import android.os.Bundle
+import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.facultyflow.databinding.ActivityLoginBinding
@@ -58,42 +59,72 @@ class LoginActivity : AppCompatActivity() {
     private fun performFirebaseLogin(email: String, password: String) {
         binding.btnLogin.isEnabled = false
         binding.btnLogin.text = "Signing in..."
+        binding.progressBar.visibility = View.VISIBLE
 
         auth.signInWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
-                    val userId = auth.currentUser?.uid ?: ""
+                    val user = auth.currentUser
                     
-                    // Fetch user details from Firestore
-                    db.collection("users").document(userId).get()
-                        .addOnSuccessListener { document ->
-                            if (document != null && document.exists()) {
-                                val name = document.getString("name") ?: ""
-                                val userType = document.getString("userType") ?: ""
-                                
-                                preferencesManager.userName = name
-                                preferencesManager.userEmail = email
-                                preferencesManager.userType = userType
-                                preferencesManager.isLoggedIn = true
-                                
-                                navigateToDashboard()
-                            } else {
-                                binding.btnLogin.isEnabled = true
-                                binding.btnLogin.text = "Sign In"
-                                Toast.makeText(this, "User profile not found", Toast.LENGTH_SHORT).show()
-                            }
-                        }
-                        .addOnFailureListener { e ->
+                    // Force reload to get latest verification status
+                    user?.reload()?.addOnCompleteListener { reloadTask ->
+                        if (user != null && user.isEmailVerified) {
+                            fetchUserProfile(user.uid, email)
+                        } else {
                             binding.btnLogin.isEnabled = true
                             binding.btnLogin.text = "Sign In"
-                            Toast.makeText(this, "Error fetching profile: ${e.message}", Toast.LENGTH_SHORT).show()
+                            binding.progressBar.visibility = View.GONE
+                            
+                            Toast.makeText(this, "Please verify your email first.", Toast.LENGTH_LONG).show()
+                            
+                            // Option to resend verification
+                            binding.tvResendEmail.visibility = View.VISIBLE
+                            binding.tvResendEmail.setOnClickListener {
+                                user?.sendEmailVerification()
+                                Toast.makeText(this, "Verification email resent.", Toast.LENGTH_SHORT).show()
+                            }
                         }
+                    }
                 } else {
                     binding.btnLogin.isEnabled = true
                     binding.btnLogin.text = "Sign In"
+                    binding.progressBar.visibility = View.GONE
                     Toast.makeText(this, "Authentication failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
+    }
+
+    private fun fetchUserProfile(userId: String, email: String) {
+        db.collection("users").document(userId).get()
+            .addOnSuccessListener { document ->
+                if (document != null && document.exists()) {
+                    val name = document.getString("name") ?: ""
+                    val userType = document.getString("userType") ?: ""
+                    
+                    // Mark as verified in DB as well
+                    db.collection("users").document(userId).update("isVerified", true)
+                    
+                    preferencesManager.userName = name
+                    preferencesManager.userEmail = email
+                    preferencesManager.userType = userType
+                    preferencesManager.isLoggedIn = true
+                    
+                    navigateToDashboard()
+                } else {
+                    resetLoginUI()
+                    Toast.makeText(this, "User profile not found", Toast.LENGTH_SHORT).show()
+                }
+            }
+            .addOnFailureListener { e ->
+                resetLoginUI()
+                Toast.makeText(this, "Error fetching profile: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
+    }
+
+    private fun resetLoginUI() {
+        binding.btnLogin.isEnabled = true
+        binding.btnLogin.text = "Sign In"
+        binding.progressBar.visibility = View.GONE
     }
 
     private fun navigateToDashboard() {

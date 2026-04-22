@@ -70,6 +70,7 @@
                             android:textSize="17sp"
                             android:textColor="@color/apple_label"
                             android:textColorHint="@color/ios_gray"
+                            android:paddingVertical="12dp"
                             android:inputType="textEmailAddress" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -91,11 +92,20 @@
                             android:textSize="17sp"
                             android:textColor="@color/apple_label"
                             android:textColorHint="@color/ios_gray"
+                            android:paddingVertical="12dp"
                             android:inputType="textPassword" />
                     </com.google.android.material.textfield.TextInputLayout>
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
+
+            <ProgressBar
+                android:id="@+id/progressBar"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:layout_marginBottom="16dp"
+                android:visibility="gone" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnLogin"
@@ -104,6 +114,17 @@
                 android:layout_height="56dp"
                 android:text="Sign In"
                 app:backgroundTint="@color/ios_blue" />
+
+            <TextView
+                android:id="@+id/tvResendEmail"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:gravity="center"
+                android:text="Didn't get an email? Resend"
+                android:textColor="@color/ios_blue"
+                android:visibility="gone"
+                android:textSize="14sp" />
 
             <TextView
                 android:id="@+id/tvSignupToggle"

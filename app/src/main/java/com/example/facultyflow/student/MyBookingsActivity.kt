@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.facultyflow.databinding.ActivityMyBookingsBinding
 import com.example.facultyflow.student.adapters.MyBookingsAdapter
@@ -20,6 +21,7 @@ class MyBookingsActivity : AppCompatActivity() {
     private var currentFilter = "all"
     private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
+    private var allBookings = mutableListOf<Booking>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -39,9 +41,6 @@ class MyBookingsActivity : AppCompatActivity() {
         binding.ivBack.setOnClickListener {
             finish()
         }
-        // Set initial filter state
-        binding.tabAll.setBackgroundColor(getColor(R.color.ios_blue))
-        binding.tabAll.setTextColor(getColor(R.color.white))
     }
 
     private fun setupBookingsList() {
@@ -61,58 +60,91 @@ class MyBookingsActivity : AppCompatActivity() {
 
     private fun selectTab(selectedTab: android.widget.TextView, filter: String) {
         listOf(binding.tabAll, binding.tabPending, binding.tabConfirmed, binding.tabDone).forEach { tab ->
-            tab.setBackgroundColor(getColor(android.R.color.transparent))
-            tab.setTextColor(getColor(R.color.apple_secondary_label))
+            tab.background = null
+            tab.setTextColor(ContextCompat.getColor(this, R.color.apple_secondary_label))
         }
 
-        selectedTab.setBackgroundColor(getColor(R.color.ios_blue))
-        selectedTab.setTextColor(getColor(R.color.white))
+        selectedTab.setBackgroundResource(R.drawable.segmented_control_selected)
+        selectedTab.setTextColor(ContextCompat.getColor(this, R.color.apple_label))
 
         currentFilter = filter
-        fetchBookings()
+        applyFilter()
     }
 
     private fun fetchBookings() {
         val studentId = auth.currentUser?.uid ?: return
 
-        var query = db.collection("bookings")
+        db.collection("bookings")
             .whereEqualTo("studentId", studentId)
             .orderBy("timestamp", Query.Direction.DESCENDING)
+            .addSnapshotListener { value, error ->
+                if (error != null) {
+                    if (error.message?.contains("index") == true) {
+                        fetchBookingsWithoutOrder(studentId)
+                    } else {
+                        Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                    }
+                    return@addSnapshotListener
+                }
 
-        if (currentFilter != "all") {
-            query = query.whereEqualTo("status", currentFilter)
+                allBookings.clear()
+                value?.forEach { doc ->
+                    val booking = Booking(
+                        id = doc.id,
+                        facultyName = doc.getString("facultyName") ?: "Faculty",
+                        facultyDesignation = doc.getString("facultyDesignation") ?: "",
+                        bookingTime = "${doc.getString("date")}, ${doc.getString("timeSlot")}",
+                        status = doc.getString("status") ?: "pending",
+                        studentNote = doc.getString("studentNote") ?: "",
+                        facultyReply = doc.getString("facultyReply")
+                    )
+                    allBookings.add(booking)
+                }
+                applyFilter()
+            }
+    }
+
+    private fun fetchBookingsWithoutOrder(studentId: String) {
+        db.collection("bookings")
+            .whereEqualTo("studentId", studentId)
+            .addSnapshotListener { value, error ->
+                if (error != null) {
+                    Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                    return@addSnapshotListener
+                }
+
+                allBookings.clear()
+                value?.forEach { doc ->
+                    val booking = Booking(
+                        id = doc.id,
+                        facultyName = doc.getString("facultyName") ?: "Faculty",
+                        facultyDesignation = doc.getString("facultyDesignation") ?: "",
+                        bookingTime = "${doc.getString("date")}, ${doc.getString("timeSlot")}",
+                        status = doc.getString("status") ?: "pending",
+                        studentNote = doc.getString("studentNote") ?: "",
+                        facultyReply = doc.getString("facultyReply")
+                    )
+                    allBookings.add(booking)
+                }
+                applyFilter()
+            }
+    }
+
+    private fun applyFilter() {
+        val filteredList = when (currentFilter) {
+            "all" -> allBookings
+            "done" -> allBookings.filter { it.status == "confirmed" || it.status == "declined" }
+            else -> allBookings.filter { it.status == currentFilter }
         }
 
-        query.addSnapshotListener { value, error ->
-            if (error != null) {
-                Toast.makeText(this, "Error fetching bookings: ${error.message}", Toast.LENGTH_SHORT).show()
-                return@addSnapshotListener
-            }
+        bookingsAdapter.submitList(filteredList)
 
-            val bookings = mutableListOf<Booking>()
-            value?.forEach { doc ->
-                // Map Firestore doc to Booking model
-                val booking = Booking(
-                    id = doc.id,
-                    facultyName = doc.getString("facultyName") ?: "Faculty",
-                    facultyDesignation = doc.getString("facultyDesignation") ?: "",
-                    bookingTime = "${doc.getString("date")}, ${doc.getString("timeSlot")}",
-                    status = doc.getString("status") ?: "pending",
-                    studentNote = doc.getString("studentNote") ?: "",
-                    facultyReply = doc.getString("facultyReply")
-                )
-                bookings.add(booking)
-            }
-
-            bookingsAdapter.submitList(bookings)
-
-            if (bookings.isEmpty()) {
-                binding.rvBookings.visibility = View.GONE
-                binding.emptyState.visibility = View.VISIBLE
-            } else {
-                binding.rvBookings.visibility = View.VISIBLE
-                binding.emptyState.visibility = View.GONE
-            }
+        if (filteredList.isEmpty()) {
+            binding.rvBookings.visibility = View.GONE
+            binding.emptyState.visibility = View.VISIBLE
+        } else {
+            binding.rvBookings.visibility = View.VISIBLE
+            binding.emptyState.visibility = View.GONE
         }
     }
 }

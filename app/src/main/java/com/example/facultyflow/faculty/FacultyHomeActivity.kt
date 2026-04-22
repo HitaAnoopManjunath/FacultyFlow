@@ -1,10 +1,12 @@
 package com.example.facultyflow.faculty
 
 import android.content.Intent
+import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.View
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.facultyflow.databinding.ActivityFacultyHomeBinding
 import com.example.facultyflow.faculty.adapters.ScheduleAdapter
@@ -21,6 +23,7 @@ class FacultyHomeActivity : AppCompatActivity() {
     private lateinit var db: FirebaseFirestore
     private lateinit var auth: FirebaseAuth
     private lateinit var preferencesManager: PreferencesManager
+    private var isUpdatingFromDb = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -57,12 +60,23 @@ class FacultyHomeActivity : AppCompatActivity() {
                 val availability = snapshot.getString("availability") ?: "green"
                 
                 binding.tvFacultyName.text = name
-                binding.switchBusy.isChecked = availability == "amber"
+                
+                isUpdatingFromDb = true
+                binding.switchBusy.isChecked = availability == "red"
+                isUpdatingFromDb = false
+
+                updateStatusUI(availability == "red")
                 
                 // Update local pref if name changed
                 preferencesManager.userName = name
             }
         }
+    }
+
+    private fun updateStatusUI(isBusy: Boolean) {
+        val color = if (isBusy) R.color.ios_red else R.color.ios_green
+        binding.statusIndicator.backgroundTintList = ColorStateList.valueOf(ContextCompat.getColor(this, color))
+        binding.switchBusy.trackTintList = ColorStateList.valueOf(ContextCompat.getColor(this, color))
     }
 
     private fun listenForPendingBookings() {
@@ -73,7 +87,6 @@ class FacultyHomeActivity : AppCompatActivity() {
             .addSnapshotListener { snapshot, _ ->
                 val count = snapshot?.size() ?: 0
                 binding.tvPendingCount.text = count.toString()
-                binding.cardPendingBookings.visibility = if (count > 0) View.VISIBLE else View.VISIBLE // Keep visible but show 0
             }
     }
 
@@ -84,20 +97,21 @@ class FacultyHomeActivity : AppCompatActivity() {
             adapter = scheduleAdapter
         }
 
-        // For now, schedule remains static or can be fetched from a 'schedules' collection
-        // In a full implementation, you'd fetch this from Firestore too
         val scheduleItems = listOf(
             ScheduleItem("09:00 AM", "10:00 AM", "Data Structures", "Room 301, Block A", "In Class", "grey"),
             ScheduleItem("10:00 AM", "11:00 AM", "Free Period", "Office", "Free", "green"),
             ScheduleItem("11:00 AM", "12:00 PM", "Algorithms", "Room 205, Block B", "In Class", "grey"),
-            ScheduleItem("02:00 PM", "03:00 PM", "Office Hours", "Office", "Busy", "amber")
+            ScheduleItem("02:00 PM", "03:00 PM", "Office Hours", "Office", "Busy", "red")
         )
         scheduleAdapter.submitList(scheduleItems)
     }
 
     private fun setupNavigation() {
+        binding.navHome.setOnClickListener {
+            // Already home
+        }
         binding.navTimetable.setOnClickListener {
-            // startActivity(Intent(this, TimetableUploadActivity::class.java))
+            startActivity(Intent(this, TimetableUploadActivity::class.java))
         }
         binding.navBookings.setOnClickListener {
             startActivity(Intent(this, BookingInboxActivity::class.java))
@@ -113,14 +127,20 @@ class FacultyHomeActivity : AppCompatActivity() {
         }
 
         binding.switchBusy.setOnCheckedChangeListener { _, isChecked ->
+            if (isUpdatingFromDb) return@setOnCheckedChangeListener
+            
             val userId = auth.currentUser?.uid ?: return@setOnCheckedChangeListener
-            val newStatus = if (isChecked) "amber" else "green"
+            val newStatus = if (isChecked) "red" else "green"
             
             db.collection("users").document(userId)
                 .update("availability", newStatus)
                 .addOnFailureListener {
                     Toast.makeText(this, "Failed to update status", Toast.LENGTH_SHORT).show()
                 }
+        }
+        
+        binding.ivProfile.setOnClickListener {
+            startActivity(Intent(this, ProfileEditorActivity::class.java))
         }
     }
 }

@@ -41,10 +41,21 @@
         <item name="android:textColor">@color/apple_label</item>
     </style>
 
+    <style name="TextAppearance.App.TitleMedium" parent="TextAppearance.Material3.TitleMedium">
+        <item name="android:fontFamily">sans-serif-medium</item>
+        <item name="android:textSize">20sp</item>
+        <item name="android:textColor">@color/apple_label</item>
+    </style>
+
     <style name="TextAppearance.App.BodyMedium" parent="TextAppearance.Material3.BodyMedium">
         <item name="android:fontFamily">sans-serif</item>
         <item name="android:textSize">17sp</item>
         <item name="android:textColor">@color/apple_secondary_label</item>
+    </style>
+
+    <!-- Shape Styles -->
+    <style name="CircleImage">
+        <item name="cornerSize">50%</item>
     </style>
 
     <!-- Apple Style Components -->

@@ -7,8 +7,6 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.facultyflow.databinding.ActivitySignupBinding
-import com.example.facultyflow.faculty.FacultyHomeActivity
-import com.example.facultyflow.student.FacultyDirectoryActivity
 import com.example.facultyflow.utils.Constants
 import com.example.facultyflow.utils.PreferencesManager
 import com.google.firebase.auth.FirebaseAuth
@@ -31,12 +29,16 @@ class SignupActivity : AppCompatActivity() {
         auth = FirebaseAuth.getInstance()
         db = FirebaseFirestore.getInstance()
 
-        // Initialize state
         updateUserTypeUI()
         
         setupUserTypeSelection()
         setupFormFields()
         setupSignupButton()
+        
+        binding.tvLoginToggle.setOnClickListener {
+            startActivity(Intent(this, LoginActivity::class.java))
+            finish()
+        }
     }
 
     private fun setupUserTypeSelection() {
@@ -66,6 +68,7 @@ class SignupActivity : AppCompatActivity() {
                 setTypeface(null, android.graphics.Typeface.NORMAL)
             }
             binding.studentFieldsContainer.visibility = View.VISIBLE
+            binding.facultyFieldsContainer.visibility = View.GONE
         } else {
             binding.btnFaculty.apply {
                 setBackgroundResource(R.drawable.segmented_control_selected)
@@ -76,16 +79,15 @@ class SignupActivity : AppCompatActivity() {
                 setTypeface(null, android.graphics.Typeface.NORMAL)
             }
             binding.studentFieldsContainer.visibility = View.GONE
+            binding.facultyFieldsContainer.visibility = View.VISIBLE
         }
     }
 
     private fun setupFormFields() {
-        val degrees = arrayOf("B.Tech Computer Science", "B.Tech Electronics", "B.Tech Mechanical", "B.Tech Civil", "M.Tech Computer Science", "M.Tech Electronics")
-        val degreeAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, degrees)
+        val degreeAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, Constants.DEGREES)
         binding.etDegree.setAdapter(degreeAdapter)
 
-        val semesters = arrayOf("1st Semester", "2nd Semester", "3rd Semester", "4th Semester", "5th Semester", "6th Semester", "7th Semester", "8th Semester")
-        val semesterAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, semesters)
+        val semesterAdapter = ArrayAdapter(this, android.R.layout.simple_dropdown_item_1line, Constants.SEMESTERS)
         binding.etSemester.setAdapter(semesterAdapter)
     }
 
@@ -113,7 +115,7 @@ class SignupActivity : AppCompatActivity() {
         if (email.isEmpty()) {
             binding.tilEmail.error = "Email is required"
             isValid = false
-        } else if (!isValidEmail(email)) {
+        } else if (!email.endsWith(Constants.EMAIL_DOMAIN)) {
             binding.tilEmail.error = "Please use your @rvu.edu.in email"
             isValid = false
         } else {
@@ -128,29 +130,30 @@ class SignupActivity : AppCompatActivity() {
         }
 
         if (isStudent) {
-            val degree = binding.etDegree.text.toString().trim()
-            val semester = binding.etSemester.text.toString().trim()
-
-            if (degree.isEmpty()) {
+            if (binding.etDegree.text.toString().isEmpty()) {
                 binding.tilDegree.error = "Degree is required"
                 isValid = false
             } else {
                 binding.tilDegree.error = null
             }
 
-            if (semester.isEmpty()) {
+            if (binding.etSemester.text.toString().isEmpty()) {
                 binding.tilSemester.error = "Semester is required"
                 isValid = false
             } else {
                 binding.tilSemester.error = null
             }
+        } else {
+            val accessCode = binding.etAccessCode.text.toString().trim()
+            if (accessCode != Constants.FACULTY_ACCESS_CODE) {
+                binding.tilAccessCode.error = "Invalid Faculty Access Code"
+                isValid = false
+            } else {
+                binding.tilAccessCode.error = null
+            }
         }
 
         return isValid
-    }
-
-    private fun isValidEmail(email: String): Boolean {
-        return email.endsWith("@rvu.edu.in") && android.util.Patterns.EMAIL_ADDRESS.matcher(email).matches()
     }
 
     private fun performFirebaseSignup() {
@@ -165,49 +168,51 @@ class SignupActivity : AppCompatActivity() {
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
-                    val userId = auth.currentUser?.uid ?: ""
-                    val userData = mutableMapOf<String, Any>(
-                        "uid" to userId,
-                        "name" to name,
-                        "email" to email,
-                        "userType" to userType
-                    )
-                    
-                    if (isStudent) {
-                        userData["degree"] = binding.etDegree.text.toString()
-                        userData["semester"] = binding.etSemester.text.toString()
-                    }
+                    val user = auth.currentUser
+                    user?.sendEmailVerification()?.addOnCompleteListener { verificationTask ->
+                        if (verificationTask.isSuccessful) {
+                            val userId = user.uid
 
-                    db.collection("users").document(userId)
-                        .set(userData)
-                        .addOnSuccessListener {
-                            // Save to local prefs too
-                            preferencesManager.userName = name
-                            preferencesManager.userEmail = email
-                            preferencesManager.userType = userType
-                            preferencesManager.isLoggedIn = true
+                            val userData = mutableMapOf<String, Any>(
+                                "uid" to userId,
+                                "name" to name,
+                                "email" to email,
+                                "userType" to userType,
+                                "isVerified" to false
+                            )
 
-                            navigateToDashboard()
-                        }
-                        .addOnFailureListener { e ->
+                            if (isStudent) {
+                                userData["degree"] = binding.etDegree.text.toString()
+                                userData["semester"] = binding.etSemester.text.toString()
+                            } else {
+                                userData["availability"] = Constants.AVAILABILITY_AVAILABLE
+                            }
+
+                            db.collection("users").document(userId)
+                                .set(userData)
+                                .addOnSuccessListener {
+                                    Toast.makeText(this, "Verification email sent to $email. Please verify before logging in.", Toast.LENGTH_LONG).show()
+                                    auth.signOut()
+                                    startActivity(Intent(this, LoginActivity::class.java))
+                                    finish()
+                                }
+                                .addOnFailureListener { e ->
+                                    user.delete()
+                                    binding.btnSignup.isEnabled = true
+                                    binding.btnSignup.text = "Create Account"
+                                    Toast.makeText(this, "Database error: ${e.message}", Toast.LENGTH_SHORT).show()
+                                }
+                        } else {
                             binding.btnSignup.isEnabled = true
                             binding.btnSignup.text = "Create Account"
-                            Toast.makeText(this, "Error saving user data: ${e.message}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(this, "Failed to send verification email.", Toast.LENGTH_SHORT).show()
                         }
+                    }
                 } else {
                     binding.btnSignup.isEnabled = true
                     binding.btnSignup.text = "Create Account"
-                    Toast.makeText(this, "Signup failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(this, "Auth error: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
                 }
             }
-    }
-
-    private fun navigateToDashboard() {
-        if (isStudent) {
-            startActivity(Intent(this, FacultyDirectoryActivity::class.java))
-        } else {
-            startActivity(Intent(this, FacultyHomeActivity::class.java))
-        }
-        finish()
     }
 }

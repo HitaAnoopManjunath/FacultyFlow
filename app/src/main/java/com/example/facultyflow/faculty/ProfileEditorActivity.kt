@@ -1,9 +1,11 @@
 package com.example.facultyflow.faculty
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.facultyflow.LoginActivity
 import com.example.facultyflow.R
 import com.example.facultyflow.databinding.ActivityProfileEditorBinding
 import com.example.facultyflow.utils.PreferencesManager
@@ -46,7 +48,21 @@ class ProfileEditorActivity : AppCompatActivity() {
 
     private fun setupClickListeners() {
         binding.btnSave.setOnClickListener { saveProfile() }
+        // Fixed: Use btnSaveSticky instead of tvSave
         binding.btnSaveSticky.setOnClickListener { saveProfile() }
+        
+        binding.btnDeleteAccount.setOnClickListener {
+            signOut()
+        }
+    }
+
+    private fun signOut() {
+        auth.signOut()
+        preferencesManager.clearAll()
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     private fun loadProfileData() {
@@ -56,10 +72,10 @@ class ProfileEditorActivity : AppCompatActivity() {
             .addOnSuccessListener { doc ->
                 if (doc.exists()) {
                     binding.etName.setText(doc.getString("name"))
+                    binding.etDesignation.setText(doc.getString("designation"))
                     binding.etDepartment.setText(doc.getString("department"), false)
                     binding.etRoomBlock.setText(doc.getString("roomBlock"))
                     binding.etOfficeHours.setText(doc.getString("officeHours"))
-                    binding.etDesignation.setText(doc.getString("designation"))
                 }
             }
     }
@@ -67,13 +83,13 @@ class ProfileEditorActivity : AppCompatActivity() {
     private fun saveProfile() {
         val userId = auth.currentUser?.uid ?: return
         val name = binding.etName.text.toString().trim()
+        val designation = binding.etDesignation.text.toString().trim()
         val department = binding.etDepartment.text.toString().trim()
         val roomBlock = binding.etRoomBlock.text.toString().trim()
         val officeHours = binding.etOfficeHours.text.toString().trim()
-        val designation = binding.etDesignation.text.toString().trim()
 
         if (name.isEmpty()) {
-            binding.tilName.error = "Name is required"
+            binding.etName.error = "Name is required"
             return
         }
 
@@ -82,10 +98,10 @@ class ProfileEditorActivity : AppCompatActivity() {
 
         val updates = hashMapOf(
             "name" to name,
+            "designation" to designation,
             "department" to department,
             "roomBlock" to roomBlock,
-            "officeHours" to officeHours,
-            "designation" to designation
+            "officeHours" to officeHours
         )
 
         db.collection("users").document(userId)
@@ -97,7 +113,7 @@ class ProfileEditorActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 binding.btnSave.isEnabled = true
-                binding.btnSave.text = "Save Changes"
+                binding.btnSave.text = "Update Profile"
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }
