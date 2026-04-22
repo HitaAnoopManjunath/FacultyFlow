@@ -1,9 +1,11 @@
 package com.example.facultyflow.faculty
 
+import android.content.Intent
 import android.os.Bundle
 import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import com.example.facultyflow.LoginActivity
 import com.example.facultyflow.R
 import com.example.facultyflow.databinding.ActivityProfileEditorBinding
 import com.example.facultyflow.utils.PreferencesManager
@@ -47,6 +49,19 @@ class ProfileEditorActivity : AppCompatActivity() {
     private fun setupClickListeners() {
         binding.btnSave.setOnClickListener { saveProfile() }
         binding.btnSaveSticky.setOnClickListener { saveProfile() }
+        
+        binding.btnDeleteAccount.setOnClickListener {
+            signOut()
+        }
+    }
+
+    private fun signOut() {
+        auth.signOut()
+        preferencesManager.clearAll()
+        val intent = Intent(this, LoginActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish()
     }
 
     private fun loadProfileData() {
@@ -97,7 +112,7 @@ class ProfileEditorActivity : AppCompatActivity() {
             }
             .addOnFailureListener { e ->
                 binding.btnSave.isEnabled = true
-                binding.btnSave.text = "Save Changes"
+                binding.btnSave.text = "Update Profile"
                 Toast.makeText(this, "Error: ${e.message}", Toast.LENGTH_SHORT).show()
             }
     }

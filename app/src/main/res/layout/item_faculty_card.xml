@@ -41,7 +41,15 @@
                 android:id="@+id/tvFacultyDesignation"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Professor • Computer Science"
+                android:text="Professor"
+                android:textColor="@color/apple_secondary_label"
+                android:textSize="14sp" />
+
+            <TextView
+                android:id="@+id/tvFacultyDepartment"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Computer Science"
                 android:textColor="@color/apple_secondary_label"
                 android:textSize="14sp" />
 

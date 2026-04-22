@@ -70,6 +70,7 @@
                             android:textSize="17sp"
                             android:textColor="@color/apple_label"
                             android:textColorHint="@color/ios_gray"
+                            android:paddingVertical="12dp"
                             android:inputType="textEmailAddress" />
                     </com.google.android.material.textfield.TextInputLayout>
 
@@ -91,6 +92,7 @@
                             android:textSize="17sp"
                             android:textColor="@color/apple_label"
                             android:textColorHint="@color/ios_gray"
+                            android:paddingVertical="12dp"
                             android:inputType="textPassword" />
                     </com.google.android.material.textfield.TextInputLayout>
 

@@ -164,24 +164,30 @@ class SignupActivity : AppCompatActivity() {
 
         auth.createUserWithEmailAndPassword(email, password)
             .addOnCompleteListener(this) { task ->
+
                 if (task.isSuccessful) {
                     val userId = auth.currentUser?.uid ?: ""
+
                     val userData = mutableMapOf<String, Any>(
                         "uid" to userId,
                         "name" to name,
                         "email" to email,
                         "userType" to userType
                     )
-                    
+
                     if (isStudent) {
                         userData["degree"] = binding.etDegree.text.toString()
                         userData["semester"] = binding.etSemester.text.toString()
                     }
 
+                    // 🔥 Save to Firestore
                     db.collection("users").document(userId)
                         .set(userData)
                         .addOnSuccessListener {
-                            // Save to local prefs too
+
+                            Toast.makeText(this, "Signup successful!", Toast.LENGTH_SHORT).show()
+
+                            // Save locally
                             preferencesManager.userName = name
                             preferencesManager.userEmail = email
                             preferencesManager.userType = userType
@@ -190,14 +196,33 @@ class SignupActivity : AppCompatActivity() {
                             navigateToDashboard()
                         }
                         .addOnFailureListener { e ->
+
+                            e.printStackTrace()
+
+                            // ❗ Rollback: delete auth user if DB fails
+                            auth.currentUser?.delete()
+
                             binding.btnSignup.isEnabled = true
                             binding.btnSignup.text = "Create Account"
-                            Toast.makeText(this, "Error saving user data: ${e.message}", Toast.LENGTH_SHORT).show()
+
+                            Toast.makeText(
+                                this,
+                                "Firestore ERROR: ${e.message}",
+                                Toast.LENGTH_LONG
+                            ).show()
                         }
+
                 } else {
+                    task.exception?.printStackTrace()
+
                     binding.btnSignup.isEnabled = true
                     binding.btnSignup.text = "Create Account"
-                    Toast.makeText(this, "Signup failed: ${task.exception?.message}", Toast.LENGTH_SHORT).show()
+
+                    Toast.makeText(
+                        this,
+                        "Auth ERROR: ${task.exception?.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
     }

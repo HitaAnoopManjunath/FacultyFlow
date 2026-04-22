@@ -36,7 +36,7 @@
                 android:textColor="@color/apple_label" />
 
             <TextView
-                android:id="@+id/tvSave"
+                android:id="@+id/btnSaveSticky"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_alignParentEnd="true"
@@ -69,15 +69,13 @@
                 android:gravity="center"
                 android:layout_marginBottom="32dp">
 
-                <div android:layout_width="wrap_content" android:layout_height="wrap_content">
-                   <de.hdodenhof.circleimageview.CircleImageView
-                        android:id="@+id/ivProfile"
-                        android:layout_width="100dp"
-                        android:layout_height="100dp"
-                        android:src="@android:drawable/ic_menu_gallery"
-                        app:civ_border_width="2dp"
-                        app:civ_border_color="@color/white" />
-                </div>
+                <de.hdodenhof.circleimageview.CircleImageView
+                    android:id="@+id/ivProfile"
+                    android:layout_width="100dp"
+                    android:layout_height="100dp"
+                    android:src="@android:drawable/ic_menu_gallery"
+                    app:civ_border_width="2dp"
+                    app:civ_border_color="@color/white" />
 
                 <TextView
                     android:id="@+id/tvChangePhoto"
@@ -116,16 +114,38 @@
                     android:paddingStart="16dp"
                     android:paddingEnd="16dp">
 
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/tilName"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        app:hintEnabled="false">
+                        <EditText
+                            android:id="@+id/etName"
+                            android:layout_width="match_parent"
+                            android:layout_height="50dp"
+                            android:background="@android:color/transparent"
+                            android:hint="Full Name"
+                            android:textSize="17sp"
+                            android:textColor="@color/apple_label"
+                            android:textColorHint="@color/ios_gray"
+                            android:inputType="textPersonName" />
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:background="@color/ios_gray6" />
+
                     <EditText
-                        android:id="@+id/etName"
+                        android:id="@+id/etDesignation"
                         android:layout_width="match_parent"
                         android:layout_height="50dp"
                         android:background="@android:color/transparent"
-                        android:hint="Full Name"
+                        android:hint="Designation (e.g. Professor)"
                         android:textSize="17sp"
                         android:textColor="@color/apple_label"
                         android:textColorHint="@color/ios_gray"
-                        android:inputType="textPersonName" />
+                        android:inputType="text" />
 
                     <View
                         android:layout_width="match_parent"

@@ -54,32 +54,56 @@ class BookingInboxActivity : AppCompatActivity() {
 
         db.collection("bookings")
             .whereEqualTo("facultyId", facultyId)
+            .whereEqualTo("status", "pending")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { value, error ->
                 if (error != null) {
-                    Toast.makeText(this, "Error fetching bookings: ${error.message}", Toast.LENGTH_SHORT).show()
+                    if (error.message?.contains("index") == true) {
+                        fetchBookingsWithoutOrder(facultyId)
+                    } else {
+                        Toast.makeText(this, "Error fetching bookings: ${error.message}", Toast.LENGTH_SHORT).show()
+                    }
                     return@addSnapshotListener
                 }
 
                 val bookings = mutableListOf<BookingRequest>()
                 value?.forEach { doc ->
                     val booking = doc.toObject(BookingRequest::class.java).copy(id = doc.id)
-                    // Only show pending requests in the inbox
-                    if (booking.status == "pending") {
-                        bookings.add(booking)
-                    }
+                    bookings.add(booking)
                 }
 
-                bookingAdapter.submitList(bookings)
-
-                if (bookings.isEmpty()) {
-                    binding.rvBookings.visibility = View.GONE
-                    binding.emptyState.visibility = View.VISIBLE
-                } else {
-                    binding.rvBookings.visibility = View.VISIBLE
-                    binding.emptyState.visibility = View.GONE
-                }
+                updateUI(bookings)
             }
+    }
+
+    private fun fetchBookingsWithoutOrder(facultyId: String) {
+        db.collection("bookings")
+            .whereEqualTo("facultyId", facultyId)
+            .whereEqualTo("status", "pending")
+            .addSnapshotListener { value, error ->
+                if (error != null) {
+                    Toast.makeText(this, "Error: ${error.message}", Toast.LENGTH_SHORT).show()
+                    return@addSnapshotListener
+                }
+
+                val bookings = mutableListOf<BookingRequest>()
+                value?.forEach { doc ->
+                    val booking = doc.toObject(BookingRequest::class.java).copy(id = doc.id)
+                    bookings.add(booking)
+                }
+                updateUI(bookings)
+            }
+    }
+
+    private fun updateUI(bookings: List<BookingRequest>) {
+        bookingAdapter.submitList(bookings)
+        if (bookings.isEmpty()) {
+            binding.rvBookings.visibility = View.GONE
+            binding.emptyState.visibility = View.VISIBLE
+        } else {
+            binding.rvBookings.visibility = View.VISIBLE
+            binding.emptyState.visibility = View.GONE
+        }
     }
 
     private fun updateBookingStatus(bookingId: String, newStatus: String) {
